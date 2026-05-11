@@ -10,6 +10,7 @@ import { TerminalSection } from "@/components/sections/TerminalSection";
 import { ExperienceSection } from "@/components/sections/ExperienceSection";
 import { InsightsSection } from "@/components/sections/InsightsSection";
 import { ContactSection } from "@/components/sections/ContactSection";
+import { FAQSection } from "@/components/sections/FAQSection";
 import { Footer } from "@/components/sections/Footer";
 
 export default function Home() {
@@ -26,6 +27,7 @@ export default function Home() {
       <TerminalSection />
       <ExperienceSection />
       <InsightsSection />
+      <FAQSection />
       <ContactSection />
       <Footer />
     </main>

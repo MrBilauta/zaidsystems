@@ -36,14 +36,13 @@ export function HeroSection() {
 
         <SlideUp delay={0.5}>
           <h2 className="mt-6 text-xl font-medium text-primary sm:text-3xl max-w-2xl">
-            AI Systems Developer & Automation Engineer
+            AI Systems Developer & Software Engineer
           </h2>
         </SlideUp>
 
         <SlideUp delay={0.6}>
           <p className="mt-8 max-w-2xl text-lg leading-relaxed text-muted-foreground/90 md:text-xl">
-            Building production-grade AI systems, scalable backend infrastructure,
-            and intelligent automation platforms.
+            The official engineering <strong>portfolio</strong> of <strong>Mohammed Zaid Khan</strong>. Building production-grade AI systems and scalable backend infrastructure.
           </p>
         </SlideUp>
 

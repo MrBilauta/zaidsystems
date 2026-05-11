@@ -1,17 +1,18 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Terminal, User, Code2, Cpu, Briefcase, Mail } from "lucide-react";
+import { Terminal, User, Code2, Cpu, Briefcase, Mail, FileText } from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 
 const navItems = [
-  { name: "Home", href: "#home", icon: Terminal },
-  { name: "About", href: "#about", icon: User },
-  { name: "Tech", href: "#tech", icon: Code2 },
-  { name: "Systems", href: "#architecture", icon: Cpu },
-  { name: "Experience", href: "#experience", icon: Briefcase },
-  { name: "Contact", href: "#contact", icon: Mail },
+  { name: "Home", href: "/#home", icon: Terminal },
+  { name: "Identity", href: "/about-mohammed-zaid-khan", icon: User },
+  { name: "Tech", href: "/#tech", icon: Code2 },
+  { name: "Systems", href: "/#architecture", icon: Cpu },
+  { name: "Experience", href: "/#experience", icon: Briefcase },
+  { name: "Blog", href: "/blog", icon: FileText },
+  { name: "Contact", href: "/#contact", icon: Mail },
 ];
 
 export function Navbar() {

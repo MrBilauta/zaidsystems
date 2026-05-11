@@ -8,25 +8,25 @@ import Link from "next/link";
 
 const articles = [
   {
-    title: "Building Deterministic AI Workflows",
-    date: "May 12, 2026",
-    readTime: "8 min read",
-    category: "AI Engineering",
-    description: "Why probabilistic models need deterministic wrappers in production environments, and how to architect them using Python and state machines.",
-  },
-  {
-    title: "Rust for Backend Optimization",
-    date: "April 28, 2026",
+    title: "AI Agent Orchestration: Beyond LLM Wrappers",
+    date: "May 10, 2026",
     readTime: "12 min read",
-    category: "Systems",
-    description: "A deep dive into migrating CPU-bound microservices from Node.js to Rust, achieving 10x throughput with lower memory footprint.",
+    category: "AI Infrastructure",
+    description: "Deep dive into building multi-agent platforms using Rust for state management and Python for model interface.",
   },
   {
-    title: "The Reality of Scalable Automation",
-    date: "April 05, 2026",
-    readTime: "6 min read",
-    category: "Infrastructure",
-    description: "Lessons learned from automating critical business operations at scale. When to use queues, when to use cron, and when to rethink the process.",
+    title: "Rust and gRPC for High-Throughput AI APIs",
+    date: "April 28, 2026",
+    readTime: "15 min read",
+    category: "Backend Systems",
+    description: "How zero-cost abstractions and memory safety enable the next generation of scalable AI backend infrastructure.",
+  },
+  {
+    title: "Autonomous CI/CD: AI in the DevOps Loop",
+    date: "April 12, 2026",
+    readTime: "9 min read",
+    category: "Automation",
+    description: "Integrating LLM-driven agents into the software development lifecycle for self-healing infrastructure.",
   },
 ];
 

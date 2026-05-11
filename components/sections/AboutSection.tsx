@@ -3,6 +3,7 @@
 import { FadeIn } from "@/components/animations/FadeIn";
 import { SlideUp } from "@/components/animations/SlideUp";
 import { Server, Database, Zap, Cpu } from "lucide-react";
+import Link from "next/link";
 
 const principles = [
   {
@@ -37,8 +38,13 @@ export function AboutSection() {
               Engineering <span className="text-primary">Philosophy</span>
             </h2>
             <p className="mt-6 max-w-2xl text-lg text-muted-foreground/90 md:text-xl">
-              I specialize in bridging the gap between cutting-edge AI models and highly reliable enterprise systems. My focus is on architecture, optimization, and automation.
+              As the founder of <strong>Zaid Systems</strong>, I specialize in bridging the gap between cutting-edge AI models and highly reliable enterprise systems.
             </p>
+            <div className="mt-8">
+              <Link href="/about-mohammed-zaid-khan" className="text-sm font-mono text-primary hover:underline uppercase tracking-widest font-bold">
+                Official Entity Record &gt;
+              </Link>
+            </div>
           </div>
         </FadeIn>
 
