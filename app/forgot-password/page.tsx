@@ -1,17 +1,40 @@
 "use client";
 
-import { useState } from "react";
-import { useAuth, useClerk } from "@clerk/nextjs";
+import React, { Suspense, useState } from "react";
+import { useAuth, useClerk, useSignIn } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { AuthLayout } from "@/components/auth/AuthLayout";
 import { AuthCard, AuthInput, AuthButton } from "@/components/auth/AuthComponents";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Loader2, KeyRound } from "lucide-react";
 
-export default function ForgotPasswordPage() {
-  const { isLoaded } = useAuth();
-  const { client, setActive } = useClerk();
+function AuthLoadingSkeleton() {
+  return (
+    <AuthCard>
+      <div className="space-y-8 py-8 flex flex-col items-center justify-center min-h-[300px]">
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+        >
+          <Loader2 className="w-10 h-10 text-primary/40" />
+        </motion.div>
+        <div className="space-y-2 text-center">
+          <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-primary/40 animate-pulse">
+            Access Recovery Protocol
+          </p>
+          <p className="text-[8px] font-medium uppercase tracking-[0.2em] text-white/5">
+            Initializing Encrypted Reset Handshake...
+          </p>
+        </div>
+      </div>
+    </AuthCard>
+  );
+}
+
+function ForgotPasswordContent() {
+  const { isLoaded: authLoaded } = useAuth();
+  const { signIn, isLoaded: signInLoaded, setActive } = useSignIn() as any;
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [password, setPassword] = useState("");
@@ -20,49 +43,41 @@ export default function ForgotPasswordPage() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
+  const isFullyLoaded = authLoaded && signInLoaded;
+
+  if (!isFullyLoaded) {
+    return <AuthLoadingSkeleton />;
+  }
+
   async function handleRequest(e: React.FormEvent) {
     e.preventDefault();
-    if (!isLoaded) return;
+    if (!signIn) return;
 
     setIsLoading(true);
     setError("");
 
     try {
-      // Step 1: Initialize the sign-in attempt with the identifier via direct client
-      await client.signIn.create({
-        identifier: email,
-      });
+      await signIn.create({ identifier: email });
       
-      // Step 2: Null-safe factor guard
-      const factors = client.signIn.supportedFirstFactors;
-
+      const factors = signIn.supportedFirstFactors;
       if (!factors) {
-        throw new Error("Initialization failed: No recovery factors available.");
+        throw new Error("No recovery factors available.");
       }
 
-      // Step 3: Find email reset factor
-      const factor = factors.find(
-        (f: any) => f.strategy === "reset_password_email_code"
-      );
-
+      const factor = factors.find((f: any) => f.strategy === "reset_password_email_code");
       if (!factor) {
         throw new Error("Password reset email factor not found.");
       }
 
-      // Step 4: Prepare the password reset code factor via direct client with the required ID
-      await client.signIn.prepareFirstFactor({
+      await signIn.prepareFirstFactor({
         strategy: "reset_password_email_code",
         emailAddressId: (factor as any).emailAddressId,
       });
       
       setStep("reset");
     } catch (err: any) {
-      console.error("Forgot password request error:", err);
-      setError(
-        err.errors?.[0]?.longMessage ||
-        err.message ||
-        "Something went wrong."
-      );
+      console.error("Recovery request error:", err);
+      setError(err.errors?.[0]?.longMessage || err.message || "Initialization failed.");
     } finally {
       setIsLoading(false);
     }
@@ -70,13 +85,13 @@ export default function ForgotPasswordPage() {
 
   async function handleReset(e: React.FormEvent) {
     e.preventDefault();
-    if (!isLoaded) return;
+    if (!signIn) return;
 
     setIsLoading(true);
     setError("");
 
     try {
-      const result = await client.signIn.attemptFirstFactor({
+      const result = await signIn.attemptFirstFactor({
         strategy: "reset_password_email_code",
         code,
         password,
@@ -86,56 +101,50 @@ export default function ForgotPasswordPage() {
         await setActive({ session: result.createdSessionId });
         router.push("/");
       } else {
-        console.error("Password reset failed:", result);
-        setError("Reset incomplete. Please try again.");
+        setError("Protocol incomplete. Verify data and retry.");
       }
     } catch (err: any) {
-      console.error("Password reset error:", err);
-      setError(err.errors?.[0]?.message || "Invalid code or password requirements not met.");
+      console.error("Reset execution error:", err);
+      setError(err.errors?.[0]?.longMessage || "Reset cycle failed.");
     } finally {
       setIsLoading(false);
     }
   }
 
   return (
-    <AuthLayout>
-      <AuthCard>
-        <div className="mb-6">
-          <Link href="/sign-in" className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-white/20 hover:text-white transition-colors mb-4">
-            <ArrowLeft className="h-3 w-3" /> Back
-          </Link>
-          <h2 className="text-lg font-bold text-white uppercase tracking-wider">Access Recovery</h2>
-          <p className="text-xs text-white/40 mt-1">
-            {step === "request" 
-              ? "Initialize password override via operative email." 
-              : "Enter the reset code sent to your email and set a new access key."}
+    <AuthCard>
+      <div className="mb-8 flex items-center gap-4">
+        <Link href="/sign-in" className="p-2 rounded-full hover:bg-white/5 transition-colors group">
+          <ArrowLeft className="w-4 h-4 text-white/20 group-hover:text-primary transition-colors" />
+        </Link>
+        <div>
+          <h2 className="text-xs font-bold uppercase tracking-widest text-white/90">
+            {step === "request" ? "Initialize Recovery" : "Override Access Key"}
+          </h2>
+          <p className="text-[10px] font-medium uppercase tracking-wider text-white/20">
+            {step === "request" ? "Request encrypted reset link" : "Input security code and new key"}
           </p>
         </div>
+      </div>
 
+      <form onSubmit={step === "request" ? handleRequest : handleReset} className="space-y-6">
         {step === "request" ? (
-          <form onSubmit={handleRequest} className="space-y-6">
-            <AuthInput
-              label="Engineering Email"
-              type="email"
-              placeholder="name@zaidsystems.dev"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-            {error && <p className="text-[10px] font-bold uppercase text-red-400 text-center">{error}</p>}
-            <AuthButton type="submit" isLoading={isLoading}>
-              Request Override
-            </AuthButton>
-          </form>
+          <AuthInput
+            label="Recovery Email"
+            type="email"
+            placeholder="operative@zaidsystems.dev"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
         ) : (
-          <form onSubmit={handleReset} className="space-y-6">
+          <div className="space-y-4">
             <AuthInput
-              label="Reset Code"
-              placeholder="000000"
+              label="Security Code"
+              placeholder="000-000"
               value={code}
               onChange={(e) => setCode(e.target.value)}
               required
-              className="font-mono tracking-widest"
             />
             <AuthInput
               label="New Access Key"
@@ -145,13 +154,47 @@ export default function ForgotPasswordPage() {
               onChange={(e) => setPassword(e.target.value)}
               required
             />
-            {error && <p className="text-[10px] font-bold uppercase text-red-400 text-center">{error}</p>}
-            <AuthButton type="submit" isLoading={isLoading}>
-              Confirm Override
-            </AuthButton>
-          </form>
+          </div>
         )}
-      </AuthCard>
+
+        <AnimatePresence mode="wait">
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="rounded-lg bg-red-500/10 border border-red-500/20 p-3 text-center"
+            >
+              <p className="text-[10px] font-bold uppercase tracking-wider text-red-400">
+                {error}
+              </p>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <AuthButton type="submit" isLoading={isLoading}>
+          {step === "request" ? "Initiate Recovery" : "Finalize Override"}
+        </AuthButton>
+      </form>
+
+      <div className="mt-8 text-center border-t border-white/5 pt-6">
+        <div className="flex items-center justify-center gap-2">
+          <KeyRound className="w-3 h-3 text-primary/40" />
+          <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-white/10 leading-relaxed">
+            Emergency Access Override Interface
+          </p>
+        </div>
+      </div>
+    </AuthCard>
+  );
+}
+
+export default function ForgotPasswordPage() {
+  return (
+    <AuthLayout>
+      <Suspense fallback={<AuthLoadingSkeleton />}>
+        <ForgotPasswordContent />
+      </Suspense>
     </AuthLayout>
   );
 }

@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import { useAuth, useClerk } from "@clerk/nextjs";
+import React, { Suspense, useState } from "react";
+import { useAuth, useClerk, useSignIn } from "@clerk/nextjs";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AuthLayout } from "@/components/auth/AuthLayout";
 import { AuthCard, AuthInput, AuthButton, AuthDivider } from "@/components/auth/AuthComponents";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
-import { Mail } from "lucide-react";
+import { Mail, Loader2, AlertCircle, RefreshCw } from "lucide-react";
 
 const GithubIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
@@ -15,38 +15,82 @@ const GithubIcon = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
-import { Suspense } from "react";
-
-export default function SignInPage() {
+function AuthLoadingSkeleton() {
   return (
-    <AuthLayout>
-      <Suspense fallback={null}>
-        <SignInForm />
-      </Suspense>
-    </AuthLayout>
+    <AuthCard>
+      <div className="space-y-8 py-8 flex flex-col items-center justify-center min-h-[300px]">
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+        >
+          <Loader2 className="w-10 h-10 text-primary/40" />
+        </motion.div>
+        <div className="space-y-2 text-center">
+          <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-primary/40 animate-pulse">
+            Initializing Secure Link
+          </p>
+          <p className="text-[8px] font-medium uppercase tracking-[0.2em] text-white/5">
+            Connecting to Clerk Auth API...
+          </p>
+        </div>
+      </div>
+    </AuthCard>
   );
 }
 
-function SignInForm() {
-  const { isLoaded } = useAuth();
-  const { client, setActive } = useClerk();
+function AuthErrorFallback({ error, reset }: { error: string; reset: () => void }) {
+  return (
+    <AuthCard>
+      <div className="space-y-6 py-6 text-center">
+        <div className="flex justify-center">
+          <div className="p-3 rounded-full bg-red-500/10 border border-red-500/20">
+            <AlertCircle className="w-6 h-6 text-red-400" />
+          </div>
+        </div>
+        <div className="space-y-2">
+          <h3 className="text-xs font-bold uppercase tracking-widest text-red-400">Rendering Error</h3>
+          <p className="text-[10px] text-white/40 leading-relaxed max-w-[200px] mx-auto">
+            {error || "The authentication terminal encountered a runtime exception."}
+          </p>
+        </div>
+        <button
+          onClick={reset}
+          className="flex items-center gap-2 mx-auto text-[10px] font-bold uppercase tracking-widest text-primary hover:text-primary-light transition-colors"
+        >
+          <RefreshCw className="w-3 h-3" />
+          Re-Initialize
+        </button>
+      </div>
+    </AuthCard>
+  );
+}
+
+function SignInContent() {
+  const { isLoaded: authLoaded } = useAuth();
+  const { signIn, isLoaded: signInLoaded, setActive } = useSignIn() as any;
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectUrl = searchParams.get("redirect_url") || "/";
+  const redirectUrl = searchParams?.get("redirect_url") || "/";
+
+  const isFullyLoaded = authLoaded && signInLoaded;
+
+  if (!isFullyLoaded) {
+    return <AuthLoadingSkeleton />;
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!isLoaded) return;
+    if (!signIn) return;
 
     setIsLoading(true);
     setError("");
 
     try {
-      const result = await client.signIn.create({
+      const result = await signIn.create({
         identifier: email,
         password,
       });
@@ -55,28 +99,28 @@ function SignInForm() {
         await setActive({ session: result.createdSessionId });
         router.push(redirectUrl);
       } else {
-        console.log("Sign in result:", result);
-        setError("Unexpected sign-in status. Please try again.");
+        console.warn("Sign in incomplete status:", result.status);
+        setError("Account requires additional verification.");
       }
     } catch (err: any) {
-      console.error("Sign in error:", err);
-      setError(err.errors?.[0]?.message || "Invalid credentials. Please try again.");
+      console.error("Sign in execution error:", err);
+      setError(err.errors?.[0]?.longMessage || err.errors?.[0]?.message || "Access Denied: Invalid Credentials.");
     } finally {
       setIsLoading(false);
     }
   }
 
   async function handleSocialSignIn(strategy: "oauth_github" | "oauth_google") {
-    if (!isLoaded) return;
+    if (!signIn) return;
     try {
-      await client.signIn.authenticateWithRedirect({
+      await signIn.authenticateWithRedirect({
         strategy,
         redirectUrl: "/api/auth/callback",
         redirectUrlComplete: redirectUrl,
       });
     } catch (err: any) {
-      console.error("Social sign in error:", err);
-      setError("Social authentication failed.");
+      console.error("Social provider error:", err);
+      setError("Identity provider handshake failed.");
     }
   }
 
@@ -112,17 +156,20 @@ function SignInForm() {
           </div>
         </div>
 
-        {error && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="rounded-lg bg-red-500/10 border border-red-500/20 p-3 text-center"
-          >
-            <p className="text-[10px] font-bold uppercase tracking-wider text-red-400">
-              {error}
-            </p>
-          </motion.div>
-        )}
+        <AnimatePresence mode="wait">
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="rounded-lg bg-red-500/10 border border-red-500/20 p-3 text-center"
+            >
+              <p className="text-[10px] font-bold uppercase tracking-wider text-red-400">
+                {error}
+              </p>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <AuthButton type="submit" isLoading={isLoading}>
           Initialize Session
@@ -150,12 +197,22 @@ function SignInForm() {
         </div>
       </form>
 
-      <div className="mt-8 text-center">
-        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/10">
+      <div className="mt-8 text-center border-t border-white/5 pt-6">
+        <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-white/10 leading-relaxed">
           Authorized Personnel Only <br />
-          Secure Access Terminal
+          Secure Access Terminal v2.0
         </p>
       </div>
     </AuthCard>
+  );
+}
+
+export default function SignInPage() {
+  return (
+    <AuthLayout>
+      <Suspense fallback={<AuthLoadingSkeleton />}>
+        <SignInContent />
+      </Suspense>
+    </AuthLayout>
   );
 }

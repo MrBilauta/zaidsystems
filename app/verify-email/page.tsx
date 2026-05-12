@@ -1,70 +1,111 @@
 "use client";
 
-import { useState } from "react";
-import { useAuth, useClerk } from "@clerk/nextjs";
+import React, { Suspense, useState } from "react";
+import { useAuth, useClerk, useSignUp } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { AuthLayout } from "@/components/auth/AuthLayout";
 import { AuthCard, AuthInput, AuthButton } from "@/components/auth/AuthComponents";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import { Loader2, MailCheck, Send } from "lucide-react";
 
-export default function VerifyEmailPage() {
-  const { isLoaded } = useAuth();
-  const { client, setActive } = useClerk();
+function AuthLoadingSkeleton() {
+  return (
+    <AuthCard>
+      <div className="space-y-8 py-8 flex flex-col items-center justify-center min-h-[300px]">
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+        >
+          <Loader2 className="w-10 h-10 text-primary/40" />
+        </motion.div>
+        <div className="space-y-2 text-center">
+          <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-primary/40 animate-pulse">
+            Identity Synchronization
+          </p>
+          <p className="text-[8px] font-medium uppercase tracking-[0.2em] text-white/5">
+            Validating Communication Channel...
+          </p>
+        </div>
+      </div>
+    </AuthCard>
+  );
+}
+
+function VerifyEmailContent() {
+  const { isLoaded: authLoaded } = useAuth();
+  const { signUp, isLoaded: signUpLoaded, setActive } = useSignUp() as any;
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
+  const isFullyLoaded = authLoaded && signUpLoaded;
+
+  if (!isFullyLoaded) {
+    return <AuthLoadingSkeleton />;
+  }
+
   async function handleVerify(e: React.FormEvent) {
     e.preventDefault();
-    if (!isLoaded) return;
+    if (!signUp) return;
 
     setIsLoading(true);
     setError("");
 
     try {
-      const completeSignUp = await client.signUp.attemptEmailAddressVerification({
+      const result = await signUp.attemptEmailAddressVerification({
         code,
       });
 
-      if (completeSignUp.status === "complete") {
-        await setActive({ session: completeSignUp.createdSessionId });
+      if (result.status === "complete") {
+        await setActive({ session: result.createdSessionId });
         router.push("/");
       } else {
-        console.error("Verification failed:", completeSignUp);
-        setError("Verification incomplete. Please try again.");
+        setError("Verification sequence incomplete.");
       }
     } catch (err: any) {
-      console.error("Verification error:", err);
-      setError(err.errors?.[0]?.message || "Invalid verification code.");
+      console.error("Verification execution error:", err);
+      setError(err.errors?.[0]?.longMessage || "Invalid verification sequence.");
     } finally {
       setIsLoading(false);
     }
   }
 
+  async function handleResend() {
+    if (!signUp) return;
+    try {
+      await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
+    } catch (err: any) {
+      console.error("Resend error:", err);
+      setError("Failed to re-transmit security code.");
+    }
+  }
+
   return (
-    <AuthLayout>
-      <AuthCard>
-        <div className="mb-6 text-center">
-          <h2 className="text-lg font-bold text-white uppercase tracking-wider">Identity Verification</h2>
-          <p className="text-xs text-white/40 mt-1">A verification code has been sent to your operative email.</p>
+    <AuthCard>
+      <div className="mb-8 text-center">
+        <div className="inline-flex p-3 rounded-2xl bg-primary/5 border border-primary/10 mb-4">
+          <MailCheck className="w-6 h-6 text-primary" />
         </div>
+        <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-white/90">Verify Channel</h2>
+        <p className="text-[10px] font-medium uppercase tracking-widest text-white/20 mt-1">Identity validation required</p>
+      </div>
 
-        <form onSubmit={handleVerify} className="space-y-6">
-          <AuthInput
-            label="One-Time Passcode (OTP)"
-            placeholder="000000"
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
-            required
-            className="text-center text-xl tracking-[1em] font-mono"
-            maxLength={6}
-          />
+      <form onSubmit={handleVerify} className="space-y-6">
+        <AuthInput
+          label="Communication Code"
+          placeholder="000-000"
+          value={code}
+          onChange={(e) => setCode(e.target.value)}
+          required
+        />
 
+        <AnimatePresence mode="wait">
           {error && (
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
               className="rounded-lg bg-red-500/10 border border-red-500/20 p-3 text-center"
             >
               <p className="text-[10px] font-bold uppercase tracking-wider text-red-400">
@@ -72,20 +113,37 @@ export default function VerifyEmailPage() {
               </p>
             </motion.div>
           )}
+        </AnimatePresence>
 
-          <AuthButton type="submit" isLoading={isLoading}>
-            Verify Identity
-          </AuthButton>
+        <AuthButton type="submit" isLoading={isLoading}>
+          Validate Identity
+        </AuthButton>
 
-          <button
-            type="button"
-            onClick={() => client.signUp.prepareEmailAddressVerification({ strategy: "email_code" })}
-            className="w-full text-[10px] font-bold uppercase tracking-widest text-white/20 hover:text-primary transition-colors"
-          >
-            Resend Passcode
-          </button>
-        </form>
-      </AuthCard>
+        <button
+          type="button"
+          onClick={handleResend}
+          className="w-full flex items-center justify-center gap-2 py-4 border border-white/5 rounded-xl text-[10px] font-bold uppercase tracking-widest text-white/20 hover:text-white hover:border-white/10 transition-all group"
+        >
+          <Send className="w-3 h-3 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+          Re-transmit Code
+        </button>
+      </form>
+
+      <div className="mt-8 text-center border-t border-white/5 pt-6">
+        <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-white/10 leading-relaxed">
+          Authorized Operative Registration Terminal
+        </p>
+      </div>
+    </AuthCard>
+  );
+}
+
+export default function VerifyEmailPage() {
+  return (
+    <AuthLayout>
+      <Suspense fallback={<AuthLoadingSkeleton />}>
+        <VerifyEmailContent />
+      </Suspense>
     </AuthLayout>
   );
 }

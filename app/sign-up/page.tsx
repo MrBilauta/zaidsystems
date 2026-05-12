@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import { useAuth, useClerk } from "@clerk/nextjs";
+import React, { Suspense, useState } from "react";
+import { useAuth, useClerk, useSignUp } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { AuthLayout } from "@/components/auth/AuthLayout";
 import { AuthCard, AuthInput, AuthButton, AuthDivider } from "@/components/auth/AuthComponents";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
-import { Mail } from "lucide-react";
+import { Mail, Loader2, ShieldAlert } from "lucide-react";
 
 const GithubIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
@@ -15,9 +15,32 @@ const GithubIcon = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
-export default function SignUpPage() {
-  const { isLoaded } = useAuth();
-  const { client, setActive } = useClerk();
+function AuthLoadingSkeleton() {
+  return (
+    <AuthCard>
+      <div className="space-y-8 py-8 flex flex-col items-center justify-center min-h-[300px]">
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+        >
+          <Loader2 className="w-10 h-10 text-primary/40" />
+        </motion.div>
+        <div className="space-y-2 text-center">
+          <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-primary/40 animate-pulse">
+            Establishing Operative Link
+          </p>
+          <p className="text-[8px] font-medium uppercase tracking-[0.2em] text-white/5">
+            Synchronizing with Zaid Systems Central...
+          </p>
+        </div>
+      </div>
+    </AuthCard>
+  );
+}
+
+function SignUpContent() {
+  const { isLoaded: authLoaded } = useAuth();
+  const { signUp, isLoaded: signUpLoaded, setActive } = useSignUp() as any;
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
@@ -26,91 +49,95 @@ export default function SignUpPage() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
+  const isFullyLoaded = authLoaded && signUpLoaded;
+
+  if (!isFullyLoaded) {
+    return <AuthLoadingSkeleton />;
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!isLoaded) return;
+    if (!signUp) return;
 
     setIsLoading(true);
     setError("");
 
     try {
-      await client.signUp.create({
+      await signUp.create({
         emailAddress: email,
         password,
         firstName,
         lastName,
       });
 
-      // Send the email verification code via direct client
-      await client.signUp.prepareEmailAddressVerification({ strategy: "email_code" });
-
-      // Redirect to verification page
+      await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
       router.push("/verify-email");
     } catch (err: any) {
-      console.error("Sign up error:", err);
-      setError(err.errors?.[0]?.message || "Registration failed. Please try again.");
+      console.error("Sign up execution error:", err);
+      setError(err.errors?.[0]?.longMessage || err.errors?.[0]?.message || "Registration sequence failed.");
     } finally {
       setIsLoading(false);
     }
   }
 
   async function handleSocialSignUp(strategy: "oauth_github" | "oauth_google") {
-    if (!isLoaded) return;
+    if (!signUp) return;
     try {
-      await client.signUp.authenticateWithRedirect({
+      await signUp.authenticateWithRedirect({
         strategy,
         redirectUrl: "/api/auth/callback",
         redirectUrlComplete: "/",
       });
     } catch (err: any) {
-      console.error("Social sign up error:", err);
-      setError("Social authentication failed.");
+      console.error("Social provider error:", err);
+      setError("Provider authorization failed.");
     }
   }
 
   return (
-    <AuthLayout>
-      <AuthCard>
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-2 gap-4">
-            <AuthInput
-              label="First Name"
-              placeholder="Zaid"
-              value={firstName}
-              onChange={(e) => setFirstName(e.target.value)}
-              required
-            />
-            <AuthInput
-              label="Last Name"
-              placeholder="Khan"
-              value={lastName}
-              onChange={(e) => setLastName(e.target.value)}
-              required
-            />
-          </div>
-
+    <AuthCard>
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="grid grid-cols-2 gap-4">
           <AuthInput
-            label="Professional Email"
-            type="email"
-            placeholder="operative@zaidsystems.dev"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            label="First Name"
+            placeholder="Zaid"
+            value={firstName}
+            onChange={(e) => setFirstName(e.target.value)}
             required
           />
-
           <AuthInput
-            label="Secure Access Key"
-            type="password"
-            placeholder="••••••••"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            label="Last Name"
+            placeholder="Khan"
+            value={lastName}
+            onChange={(e) => setLastName(e.target.value)}
             required
           />
+        </div>
 
+        <AuthInput
+          label="Professional Email"
+          type="email"
+          placeholder="operative@zaidsystems.dev"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+        />
+
+        <AuthInput
+          label="Secure Access Key"
+          type="password"
+          placeholder="••••••••"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+        />
+
+        <AnimatePresence mode="wait">
           {error && (
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
               className="rounded-lg bg-red-500/10 border border-red-500/20 p-3 text-center"
             >
               <p className="text-[10px] font-bold uppercase tracking-wider text-red-400">
@@ -118,40 +145,52 @@ export default function SignUpPage() {
               </p>
             </motion.div>
           )}
+        </AnimatePresence>
 
-          <AuthButton type="submit" isLoading={isLoading}>
-            Request Credentials
+        <AuthButton type="submit" isLoading={isLoading}>
+          Request Credentials
+        </AuthButton>
+
+        <AuthDivider text="Onboard via Provider" />
+
+        <div className="grid grid-cols-2 gap-4">
+          <AuthButton
+            type="button"
+            variant="outline"
+            className="py-2.5"
+            onClick={() => handleSocialSignUp("oauth_github")}
+          >
+            <GithubIcon className="h-4 w-4" />
           </AuthButton>
+          <AuthButton
+            type="button"
+            variant="outline"
+            className="py-2.5"
+            onClick={() => handleSocialSignUp("oauth_google")}
+          >
+            <Mail className="h-4 w-4" />
+          </AuthButton>
+        </div>
+      </form>
 
-          <AuthDivider text="Onboard via Provider" />
-
-          <div className="grid grid-cols-2 gap-4">
-            <AuthButton
-              type="button"
-              variant="outline"
-              className="py-2.5"
-              onClick={() => handleSocialSignUp("oauth_github")}
-            >
-              <GithubIcon className="h-4 w-4" />
-            </AuthButton>
-            <AuthButton
-              type="button"
-              variant="outline"
-              className="py-2.5"
-              onClick={() => handleSocialSignUp("oauth_google")}
-            >
-              <Mail className="h-4 w-4" />
-            </AuthButton>
-          </div>
-        </form>
-
-        <div className="mt-8 text-center border-t border-white/5 pt-6">
-          <p className="text-[9px] font-bold uppercase tracking-[0.3em] text-white/10">
-            Internal Provisioning Terminal <br />
-            Secure Node: 0xZAID
+      <div className="mt-8 text-center border-t border-white/5 pt-6">
+        <div className="flex items-center justify-center gap-2 mb-4">
+          <ShieldAlert className="w-3 h-3 text-primary/40" />
+          <p className="text-[10px] font-bold uppercase tracking-widest text-primary/40">
+            Authorized Operations Only
           </p>
         </div>
-      </AuthCard>
+      </div>
+    </AuthCard>
+  );
+}
+
+export default function SignUpPage() {
+  return (
+    <AuthLayout>
+      <Suspense fallback={<AuthLoadingSkeleton />}>
+        <SignUpContent />
+      </Suspense>
     </AuthLayout>
   );
 }
