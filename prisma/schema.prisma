@@ -1,0 +1,417 @@
+// Zaid Systems — Enterprise-Grade Prisma Schema
+// Zero-Trust, Audit-Ready, SaaS-Scalable Architecture
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================================
+// ENUMS
+// ============================================================
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  EDITOR
+  VIEWER
+}
+
+enum PostStatus {
+  DRAFT
+  REVIEW      // AI-generated content awaiting human approval
+  SCHEDULED
+  PUBLISHED
+  ARCHIVED
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  PUBLISH
+  UNPUBLISH
+  RESTORE
+  LOGIN
+  LOGOUT
+  SECURITY_EVENT
+}
+
+enum SecurityEventType {
+  FAILED_LOGIN
+  SUSPICIOUS_IP
+  RATE_LIMIT_HIT
+  UNAUTHORIZED_ACCESS
+  PROMPT_INJECTION_DETECTED
+  UPLOAD_VIOLATION
+}
+
+// ============================================================
+// USER & AUTH (Clerk manages actual auth; this tracks metadata)
+// ============================================================
+
+model User {
+  id           String   @id @default(cuid())
+  clerkId      String   @unique // Clerk user ID — source of truth
+  email        String   @unique
+  name         String?
+  role         Role     @default(ADMIN)
+  avatarUrl    String?
+  isActive     Boolean  @default(true)
+  
+  // SaaS-ready stubs
+  organizationId String? // Future: multi-tenancy
+  
+  // Timestamps
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  lastLoginAt  DateTime?
+
+  // Relations
+  posts          Post[]
+  auditLogs      AuditLog[]
+  securityEvents SecurityEvent[]
+  aiUsage        AiUsage[]
+
+  @@index([clerkId])
+  @@index([email])
+}
+
+// ============================================================
+// CONTENT — BLOG POSTS
+// ============================================================
+
+model Post {
+  id          String     @id @default(cuid())
+  title       String
+  slug        String     @unique
+  description String
+  content     String     @db.Text // Sanitized before storage
+  status      PostStatus @default(DRAFT)
+  
+  // Publishing
+  publishedAt   DateTime?
+  scheduledAt   DateTime?  // For scheduled publishing
+  featuredAt    DateTime?
+  
+  // Taxonomy
+  category    String
+  tags        String[]
+  featured    Boolean  @default(false)
+  
+  // Author (mirrors Clerk user)
+  authorId    String?
+  authorName  String   @default("Mohammed Zaid Khan")
+  author      User?    @relation(fields: [authorId], references: [id])
+  
+  // SEO Metadata
+  metaTitle       String?
+  metaDescription String?
+  ogImage         String?
+  canonicalUrl    String?
+  faqData         Json?    // Array of {question, answer}
+  schemaData      Json?    // Custom JSON-LD overrides
+
+  // Soft delete — NEVER hard delete content
+  deletedAt   DateTime?
+  
+  // SaaS-ready stub
+  organizationId String?
+
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  revisions   Revision[]
+  auditLogs   AuditLog[]
+
+  @@index([slug])
+  @@index([status])
+  @@index([deletedAt])
+  @@index([organizationId])
+}
+
+// ============================================================
+// CONTENT VERSIONING — Full Revision History
+// ============================================================
+
+model Revision {
+  id        String   @id @default(cuid())
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id])
+  
+  // Full content snapshot at point in time
+  title     String
+  content   String   @db.Text
+  status    PostStatus
+  authorId  String?
+  
+  // Semantic version label (e.g., "v1.0", "Pre-publish edit")
+  label     String?
+  
+  createdAt DateTime @default(now())
+
+  @@index([postId])
+}
+
+// ============================================================
+// PROJECTS
+// ============================================================
+
+model Project {
+  id          String   @id @default(cuid())
+  title       String
+  slug        String   @unique
+  description String
+  content     String?  @db.Text
+  image       String?
+  githubUrl   String?
+  liveUrl     String?
+  techStack   String[]
+  featured    Boolean  @default(false)
+  visibility  Boolean  @default(true)
+  order       Int      @default(0)
+  
+  // SEO
+  metaTitle       String?
+  metaDescription String?
+  
+  // Soft delete
+  deletedAt   DateTime?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([slug])
+  @@index([deletedAt])
+}
+
+// ============================================================
+// SITE SETTINGS — Singleton pattern
+// ============================================================
+
+model SiteSettings {
+  id                String   @id @default("singleton")
+  
+  // Global Platform Identity
+  siteName          String?
+  siteDescription   String?
+  siteUrl           String?
+  ogImage           String?
+  
+  // Hero Customization
+  heroTitle         String?
+  heroSubtitle      String?
+  heroCtaText       String?
+  heroCtaLink       String?
+  heroSecondaryText String?
+  heroSecondaryLink String?
+  
+  // Social & Connectivity
+  socialLinks       Json?    // {github, linkedin, hackerrank, twitter}
+  
+  // Layout Orchestration
+  visibility        Json?    // {hero, about, tech, experience, blog, faq}
+  navbarLinks       Json?    // Custom nav items
+  footerNote        String?
+  
+  // Platform Intelligence & SEO
+  gaMeasurementId   String?
+  robotsTxt         String?  @db.Text
+  customHead        String?  @db.Text
+  
+  // Platform Ops
+  maintenanceMode   Boolean  @default(false)
+  
+  // Author Entity
+  authorName        String?
+  authorRole        String?
+  
+  updatedAt         DateTime @updatedAt
+  updatedBy         String?  // Clerk user ID
+}
+
+// ============================================================
+// SECURITY — Audit Logging (IMMUTABLE)
+// ============================================================
+
+model AuditLog {
+  id           String      @id @default(cuid())
+  action       AuditAction
+  resourceType String      // "post", "project", "settings"
+  resourceId   String?
+  resourceName String?     // Human-readable label for the log
+  actorId      String?     // Clerk user ID
+  actorEmail   String?
+  actor        User?       @relation(fields: [actorId], references: [id])
+  post         Post?       @relation(fields: [resourceId], references: [id])
+  
+  // Request context
+  ipAddress    String?
+  userAgent    String?
+  
+  // Payload snapshots — what changed
+  previousData Json?       // State before change
+  newData      Json?       // State after change
+  
+  // Immutable timestamp — no updatedAt
+  createdAt    DateTime    @default(now())
+
+  @@index([actorId])
+  @@index([resourceType, resourceId])
+  @@index([createdAt])
+}
+
+// ============================================================
+// SECURITY — Security Events
+// ============================================================
+
+model SecurityEvent {
+  id        String            @id @default(cuid())
+  type      SecurityEventType
+  severity  String            @default("LOW") // LOW, MEDIUM, HIGH, CRITICAL
+  actorId   String?
+  actor     User?             @relation(fields: [actorId], references: [id])
+  ipAddress String?
+  userAgent String?
+  path      String?
+  details   Json?             // Contextual data about the event
+  resolved  Boolean           @default(false)
+  createdAt DateTime          @default(now())
+
+  @@index([type])
+  @@index([severity])
+  @@index([createdAt])
+}
+
+// ============================================================
+// AI — Usage Quotas & Generation History
+// ============================================================
+
+model AiUsage {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  action      String   // "generate_title", "generate_meta", "generate_faq", "expand_content"
+  tokensUsed  Int      @default(0)
+  model       String   // "gpt-4o", "claude-3.5-sonnet"
+  prompt      String?  @db.Text // Stored for moderation review
+  output      String?  @db.Text // AI output — goes to DRAFT, never auto-published
+  approved    Boolean  @default(false)
+  approvedBy  String?
+  createdAt   DateTime @default(now())
+  
+  // Rate limit window tracking
+  windowStart DateTime @default(now())
+
+  @@index([userId, windowStart])
+}
+
+// ============================================================
+// ANALYTICS — Cached Metrics
+// ============================================================
+
+model AnalyticsSnapshot {
+  id          String   @id @default(cuid())
+  date        DateTime @default(now())
+  period      String   // "daily", "weekly", "monthly"
+  
+  // Traffic
+  pageViews       Int @default(0)
+  uniqueVisitors  Int @default(0)
+  avgSessionTime  Int @default(0) // seconds
+  bounceRate      Float @default(0)
+  
+  // SEO
+  impressions     Int @default(0)
+  clicks          Int @default(0)
+  avgPosition     Float @default(0)
+  
+  // AI Crawler traffic
+  gptbotVisits        Int @default(0)
+  perplexitybotVisits Int @default(0)
+  claudebotVisits     Int @default(0)
+  googleExtended      Int @default(0)
+  
+  // Performance
+  lighthouseScore Int?
+  p75Lcp          Float? // Core Web Vitals
+  p75Fid          Float?
+  p75Cls          Float?
+  
+  metadata        Json?
+  createdAt       DateTime @default(now())
+
+  @@index([period, date])
+}
+
+// ============================================================
+// MEDIA — Asset Management
+// ============================================================
+
+model Media {
+  id           String   @id @default(cuid())
+  filename     String
+  originalName String
+  url          String
+  cdnUrl       String?  // Cloudinary CDN URL
+  mimeType     String   // Validated server-side
+  size         Int      // bytes
+  width        Int?
+  height       Int?
+  tags         String[]
+  folder       String   @default("general")
+  uploadedBy   String?  // Clerk user ID
+  
+  // Soft delete
+  deletedAt    DateTime?
+
+  createdAt    DateTime @default(now())
+
+  @@index([mimeType])
+  @@index([deletedAt])
+}
+
+// ============================================================
+// AI PROMPTS — Reusable Prompt Templates
+// ============================================================
+
+model PromptTemplate {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  systemPrompt String  @db.Text // NEVER exposed to client
+  userPromptTemplate String @db.Text // Handlebars-style template
+  category    String   // "blog", "seo", "faq", "meta"
+  model       String   @default("gpt-4o")
+  maxTokens   Int      @default(2000)
+  isActive    Boolean  @default(true)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ============================================================
+// API KEYS — For future SaaS API access
+// ============================================================
+
+model ApiKey {
+  id          String   @id @default(cuid())
+  name        String
+  keyHash     String   @unique // SHA-256 hash — never store plaintext
+  prefix      String   // First 8 chars for identification (e.g., "zs_live_")
+  userId      String
+  scopes      String[] // e.g., ["read:posts", "write:posts"]
+  lastUsedAt  DateTime?
+  expiresAt   DateTime?
+  revokedAt   DateTime?
+  
+  createdAt   DateTime @default(now())
+
+  @@index([keyHash])
+  @@index([userId])
+}

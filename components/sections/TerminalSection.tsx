@@ -18,7 +18,7 @@ export function TerminalSection() {
         <div className="text-white/60 mb-4">
           <p className="text-primary font-bold">Zaid Systems (v2.4.0)</p>
           <p>Initializing secure connection to infrastructure...</p>
-          <p>Type <span className="text-primary underline">'help'</span> to explore the system.</p>
+          <p>Type <span className="text-primary underline">&apos;help&apos;</span> to explore the system.</p>
         </div>
       )
     }

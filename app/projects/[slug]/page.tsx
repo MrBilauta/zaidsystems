@@ -4,13 +4,35 @@ import { Footer } from "@/components/sections/Footer";
 import { FadeIn } from "@/components/animations/FadeIn";
 import { SlideUp } from "@/components/animations/SlideUp";
 import { Badge } from "@/components/ui/badge";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { Code, ExternalLink, ArrowLeft, Target, GitMerge, Zap, Shield, LineChart } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
-// Mock database for case studies
-const caseStudies: Record<string, any> = {
+interface ProjectMetric {
+  label: string;
+  value: string;
+}
+
+interface CaseStudy {
+  title: string;
+  subtitle: string;
+  description: string;
+  metrics: ProjectMetric[];
+  tags: string[];
+  problem: string;
+  systemDesign: string;
+  architectureDecisions: string;
+  optimization: string;
+  scalingLogic: string;
+  challenges: string;
+  impact: string;
+  github: string;
+  demo: string;
+}
+
+// Mock database for case studies — Transitioning to real DB in Phase 3
+const caseStudies: Record<string, CaseStudy> = {
   "ai-debate-bot": {
     title: "AI Debate Bot",
     subtitle: "Multi-Agent Structured Reasoning System",
@@ -158,7 +180,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
             </Link>
             
             <div className="mb-8 flex flex-wrap gap-2.5">
-              {project.tags.map((tag: string) => (
+              {project.tags.map((tag) => (
                 <Badge key={tag} variant="secondary" className="bg-white/5 text-primary/80 border-white/10 px-3 py-1 font-mono text-[10px] font-bold uppercase tracking-widest">
                   {tag}
                 </Badge>
@@ -193,7 +215,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
       <section className="border-y border-white/10 bg-white/[0.02] backdrop-blur-xl relative z-20">
         <div className="section-container py-12 md:py-16">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-12 divide-y sm:divide-y-0 sm:divide-x divide-white/10">
-            {project.metrics.map((metric: any, i: number) => (
+            {project.metrics.map((metric, i) => (
               <SlideUp key={metric.label} delay={0.2 + i * 0.1} className="flex flex-col items-center justify-center pt-8 sm:pt-0">
                 <span className="text-5xl md:text-6xl font-bold text-white mb-3 tracking-tighter font-mono">{metric.value}</span>
                 <span className="text-xs font-mono font-bold text-primary uppercase tracking-[0.3em] opacity-80">{metric.label}</span>

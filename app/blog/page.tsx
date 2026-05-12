@@ -3,76 +3,62 @@ import { Footer } from "@/components/sections/Footer";
 import { FadeIn } from "@/components/animations/FadeIn";
 import { SlideUp } from "@/components/animations/SlideUp";
 import { SpotlightCard } from "@/components/ui/SpotlightCard";
-import { Metadata } from "next";
+import { ArrowRight, Calendar, Clock } from "lucide-react";
 import Link from "next/link";
+import { getAllPosts, UnifiedPost } from "@/lib/data";
+import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Insights & Engineering Blog",
-  description: "Technical articles on AI systems engineering, backend optimization, and the future of automation by Mohammed Zaid Khan.",
-  alternates: {
-    canonical: "/blog",
-  },
+  title: "Engineering Insights | Zaid Systems",
+  description: "Deep technical analysis of AI infrastructure, distributed systems, and automation architecture by Mohammed Zaid Khan.",
 };
 
-const posts = [
-  {
-    title: "The Architecture of Scalable AI Multi-Agent Platforms",
-    excerpt: "Exploring the challenges and solutions in building distributed LLM orchestration layers for enterprise workflows.",
-    date: "May 10, 2026",
-    slug: "ai-systems-engineering",
-    tags: ["AI", "Architecture", "Orchestration"]
-  },
-  {
-    title: "Optimizing High-Throughput APIs with Rust and gRPC",
-    excerpt: "How switching to a memory-safe, compiled language transformed our system throughput by 15x while reducing latency.",
-    date: "April 28, 2026",
-    slug: "backend-optimization-rust",
-    tags: ["Rust", "Backend", "Performance"]
-  },
-  {
-    title: "The Future of Autonomous Engineering Workflows",
-    excerpt: "Predictive analysis on how AI agents will redefine CI/CD and infrastructure management in the next 5 years.",
-    date: "April 15, 2026",
-    slug: "future-of-automation",
-    tags: ["Automation", "Future", "DevOps"]
-  }
-];
+export default async function BlogPage() {
+  const posts = await getAllPosts();
 
-export default function BlogPage() {
   return (
-    <main className="flex min-h-screen flex-col bg-background text-foreground">
+    <main className="flex min-h-screen flex-col bg-background">
       <Navbar />
       <section className="relative pt-40 pb-24 overflow-hidden">
         <div className="section-container relative z-10">
           <FadeIn>
-            <h1 className="text-5xl md:text-7xl font-bold tracking-tighter mb-8 text-white">
-              Engineering <span className="text-primary">Insights</span>
-            </h1>
-            <p className="text-xl text-muted-foreground/90 max-w-2xl mb-16 leading-relaxed">
-              Deep dives into AI systems, backend architecture, and the future of autonomous technology.
-            </p>
+            <div className="mb-20">
+              <h1 className="text-5xl md:text-7xl font-bold tracking-tighter mb-8 text-white">
+                Engineering <span className="text-primary">Insights</span>
+              </h1>
+              <p className="max-w-2xl text-lg text-muted-foreground/90 md:text-xl leading-relaxed">
+                Technical deep-dives on systems architecture, automation strategies, and the integration of AI models into mission-critical production.
+              </p>
+            </div>
           </FadeIn>
 
           <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-            {posts.map((post, idx) => (
+            {posts.map((post: UnifiedPost, idx: number) => (
               <SlideUp key={post.slug} delay={idx * 0.1}>
-                <Link href={`/blog/${post.slug}`}>
-                  <SpotlightCard className="h-full p-8 border-white/10 bg-white/[0.02] hover:border-primary/40 transition-colors">
-                    <div className="text-xs font-mono text-primary font-bold uppercase tracking-widest mb-4">
-                      {post.date}
+                <Link href={`/blog/${post.slug}`} className="block h-full group">
+                  <SpotlightCard className="h-full p-8 flex flex-col border-white/10 bg-white/[0.02] hover:bg-white/[0.05] transition-all duration-500 rounded-3xl">
+                    <div className="mb-6 flex items-center gap-3 text-[10px] font-mono font-bold uppercase tracking-widest text-muted-foreground">
+                      <span className="text-primary">{post.category}</span>
+                      <span className="opacity-20">/</span>
+                      <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {post.readTime || '15 min read'}</span>
                     </div>
-                    <h2 className="text-2xl font-bold text-white mb-4 tracking-tight group-hover:text-primary transition-colors">
+                    
+                    <h3 className="mb-4 text-2xl font-bold text-white group-hover:text-primary transition-colors tracking-tight line-clamp-2">
                       {post.title}
-                    </h2>
-                    <p className="text-muted-foreground/80 mb-6 line-clamp-3">
-                      {post.excerpt}
+                    </h3>
+                    
+                    <p className="mb-10 text-base text-muted-foreground/80 leading-relaxed line-clamp-3">
+                      {post.description}
                     </p>
-                    <div className="flex flex-wrap gap-2">
-                      {post.tags.map(tag => (
-                        <span key={tag} className="text-[10px] font-mono text-white/40 border border-white/10 px-2 py-1 rounded">
-                          {tag}
-                        </span>
-                      ))}
+                    
+                    <div className="mt-auto flex items-center justify-between pt-6 border-t border-white/5 text-sm">
+                      <div className="flex items-center gap-2 text-white/30 font-mono text-[10px] uppercase">
+                        <Calendar className="w-3 h-3" />
+                        {new Date(post.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </div>
+                      <span className="text-primary flex items-center gap-2 font-bold uppercase tracking-widest text-[10px] group-hover:gap-3 transition-all duration-300">
+                        Read Analysis <ArrowRight className="h-4 w-4" />
+                      </span>
                     </div>
                   </SpotlightCard>
                 </Link>

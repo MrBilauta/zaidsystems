@@ -30,8 +30,34 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
+# env files — real secrets MUST never be committed
+.env
+.env.local
+.env.production
+.env.development
+.env.staging
+.env.test
+.env.test.local
+.env.development.local
+.env.production.local
+.env.sample
+.env.vault
+.env.backup
+.env.bak
+
+# .env.example IS committed — it's the template with no real secrets
+!.env.example
+
+# Security — private keys and certificates
+*.pem
+*.key
+*.p12
+*.pfx
+serviceAccountKey.json
+
+# Editor artifacts
+.idea/
+.vscode/settings.json
 
 # vercel
 .vercel
@@ -39,3 +65,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# clerk configuration (can include secrets)
+/.clerk/

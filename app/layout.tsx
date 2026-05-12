@@ -14,6 +14,7 @@ const geistMono = Geist_Mono({
 
 import { JsonLd, personSchema, organizationSchema, websiteSchema } from "@/components/seo/JsonLd";
 import type { Viewport } from "next";
+import { ClerkProvider } from "@clerk/nextjs";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.zaidsystems.dev"),
@@ -122,19 +123,21 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} dark`}
-      suppressHydrationWarning
-    >
-      <body className="min-h-screen bg-background text-foreground antialiased selection:bg-primary/30 relative">
-        <JsonLd data={personSchema} />
-        <JsonLd data={organizationSchema} />
-        <JsonLd data={websiteSchema} />
-        <ClientSideComponents />
-        <div className="fixed inset-0 bg-noise z-50 pointer-events-none" />
-        {children}
-      </body>
-    </html>
+    <ClerkProvider>
+      <html
+        lang="en"
+        className={`${geistSans.variable} ${geistMono.variable} dark`}
+        suppressHydrationWarning
+      >
+        <body className="min-h-screen bg-background text-foreground antialiased selection:bg-primary/30 relative">
+          <JsonLd data={personSchema} />
+          <JsonLd data={organizationSchema} />
+          <JsonLd data={websiteSchema} />
+          <ClientSideComponents />
+          <div className="fixed inset-0 bg-noise z-50 pointer-events-none" />
+          {children}
+        </body>
+      </html>
+    </ClerkProvider>
   );
 }
