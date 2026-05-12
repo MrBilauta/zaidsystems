@@ -57,13 +57,25 @@ export const proxy = clerkMiddleware(async (auth, req) => {
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0] ?? "unknown";
   const nonce = generateNonce();
 
-  // 1. Skip over-aggressive checks for internal Next.js assets and public auth routes
-  if (
-    pathname.startsWith("/_next") || 
-    pathname.includes("favicon.ico") ||
-    isAuthRoute(req) ||
-    isWebhookRoute(req)
-  ) {
+  // 1. Skip over-aggressive checks for internal Next.js assets
+  if (pathname.startsWith("/_next") || pathname.includes("favicon.ico") || isWebhookRoute(req)) {
+    return applySecurityHeaders(req, NextResponse.next(), nonce, requestId);
+  }
+
+  // 2. Private Onboarding Gate (Disable public sign-ups)
+  if (pathname === "/sign-up") {
+    const onboardingToken = req.nextUrl.searchParams.get("token");
+    const secretToken = process.env.SECRET_ONBOARDING_TOKEN;
+
+    // If token is missing or incorrect, redirect to sign-in (Public Disguise)
+    if (!secretToken || onboardingToken !== secretToken) {
+      const signInUrl = new URL("/sign-in", req.url);
+      return applySecurityHeaders(req, NextResponse.redirect(signInUrl), nonce, requestId);
+    }
+  }
+
+  // 3. Allow public access to sign-in
+  if (pathname === "/sign-in") {
     return applySecurityHeaders(req, NextResponse.next(), nonce, requestId);
   }
 
