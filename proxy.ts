@@ -99,7 +99,7 @@ export const proxy = clerkMiddleware(async (auth, req) => {
     }
 
     // Role-based Access Control (Enforce ADMIN or SUPER_ADMIN)
-    const role = session.sessionClaims?.metadata?.role;
+    const role = (session.sessionClaims?.metadata as any)?.role;
     if (role !== "ADMIN" && role !== "SUPER_ADMIN") {
       return NextResponse.rewrite(new URL("/403", req.url));
     }

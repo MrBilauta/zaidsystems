@@ -17,8 +17,8 @@ export const processAiContent = inngest.createFunction(
   { 
     id: "process-ai-content", 
     name: "AI: Generate Technical Content",
+    triggers: [{ event: "cms/ai.generate" }],
   },
-  { event: "cms/ai.generate" },
   async ({ event, step }) => {
     const { usageId, systemPrompt, userPrompt } = (event as unknown as AiGenerateEvent).data;
 

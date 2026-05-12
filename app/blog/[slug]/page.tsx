@@ -120,7 +120,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
                   remarkPlugins={[remarkGfm]}
                   rehypePlugins={[rehypeSlug, rehypeHighlight]}
                   components={{
-                    code({ inline, className, children, ...props }: { inline?: boolean; className?: string; children: React.ReactNode }) {
+                    code({ inline, className, children, ...props }: { inline?: boolean; className?: string; children?: React.ReactNode }) {
                       const match = /language-(\w+)/.exec(className || "");
                       if (!inline && match && match[1] === "mermaid") {
                         return <Mermaid chart={String(children).replace(/\n$/, "")} />;
@@ -138,7 +138,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
                     PerformanceBenchmark,
                     FAQAccordion,
                     CodeComparison
-                  }}
+                  } as any}
                 >
                   {post.content}
                 </ReactMarkdown>

@@ -102,7 +102,7 @@ model Post {
   tags        String[]
   featured    Boolean  @default(false)
   
-  // Author (mirrors Clerk user)
+  // Author (references internal DB ID)
   authorId    String?
   authorName  String   @default("Mohammed Zaid Khan")
   author      User?    @relation(fields: [authorId], references: [id])
@@ -245,7 +245,7 @@ model AuditLog {
   resourceType String      // "post", "project", "settings"
   resourceId   String?
   resourceName String?     // Human-readable label for the log
-  actorId      String?     // Clerk user ID
+  actorId      String?     // Internal User DB ID
   actorEmail   String?
   actor        User?       @relation(fields: [actorId], references: [id])
   post         Post?       @relation(fields: [resourceId], references: [id])

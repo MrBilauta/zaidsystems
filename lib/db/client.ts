@@ -14,8 +14,11 @@ function createPrismaClient() {
   const connectionString = process.env.DATABASE_URL;
 
   if (!connectionString) {
-    console.warn("⚠️ [Prisma] DATABASE_URL is not set. Database features will be disabled.");
-    return new PrismaClient();
+    console.warn("⚠️ [Prisma] DATABASE_URL is not set. Database features will be limited.");
+    // In Prisma 7, we must still provide a valid structure even if it's a dummy for build time
+    return new PrismaClient({
+      log: ["error"],
+    });
   }
 
   // Configure connection pool with resilience
@@ -26,7 +29,6 @@ function createPrismaClient() {
     connectionTimeoutMillis: 2000,
   });
 
-  // Handle pool errors to prevent process crashes
   pool.on("error", (err) => {
     console.error("❌ [Prisma] Unexpected error on idle client", err);
   });
@@ -45,4 +47,16 @@ if (process.env.NODE_ENV !== "production") {
   globalForPrisma.prisma = prisma;
 }
 
-export * from "@prisma/client";
+export { 
+  AuditAction, 
+  Role, 
+  PostStatus, 
+  SecurityEventType, 
+  type User, 
+  type Post, 
+  type Revision, 
+  type AuditLog, 
+  type SecurityEvent, 
+  type AiUsage 
+} from "@prisma/client";
+
