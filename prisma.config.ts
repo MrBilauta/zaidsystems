@@ -1,10 +1,15 @@
+import "dotenv/config";
 import { defineConfig } from "prisma/config";
 
 export default defineConfig({
   schema: "prisma/schema.prisma",
-  // Prisma CLI (migrate, introspect) uses DIRECT_URL to bypass connection pooler.
-  // Falls back to DATABASE_URL if DIRECT_URL is not set (e.g., in simple setups).
+
+  // Prisma CLI operations (migrate/introspect)
+  // should use DIRECT_URL to bypass PgBouncer.
   datasource: {
-    url: process.env.DIRECT_URL ?? process.env.DATABASE_URL ?? "postgresql://localhost/dev",
+    url:
+      process.env.DIRECT_URL ??
+      process.env.DATABASE_URL ??
+      "postgresql://localhost/dev",
   },
 });
