@@ -55,54 +55,43 @@ function SignInContent() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
-    console.clear();
-
-    console.log("=== SIGN IN ATTEMPT START ===");
-
     try {
       setError("");
       setIsAuthenticating(true);
 
-      console.log("Submitting credentials...");
+      console.log("=== SIGN IN ATTEMPT START ===");
 
       const attempt = await signIn.create({
         identifier: email,
         password,
       });
 
-      console.log("RAW SIGNIN ATTEMPT:", attempt);
-      console.log("ATTEMPT TYPE:", typeof attempt);
+      console.log("RAW ATTEMPT:", attempt);
+      console.log("ATTEMPT STATUS:", attempt.status);
 
       if (attempt.status === "complete") {
+        console.log("SESSION ID:", attempt.createdSessionId);
+
         await setActive?.({
           session: attempt.createdSessionId,
         });
 
+        console.log("SESSION ACTIVATED");
+
         router.push(redirectUrl);
-      } else {
-        console.log("INCOMPLETE SIGN IN:", attempt);
+
+        return;
       }
+
+      console.log("NON COMPLETE ATTEMPT:", attempt);
+
+      setError("Authentication incomplete.");
     } catch (err: any) {
-      console.log("=== FULL AUTH FAILURE ===");
-
-      console.error(err);
-
-      try {
-        console.log(
-          "STRINGIFIED ERROR:",
-          JSON.stringify(err, null, 2)
-        );
-      } catch {}
-
-      if (err?.errors) {
-        console.table(err.errors);
-      }
-
-      console.log("RAW ERRORS:", err?.errors);
+      console.error("FULL AUTH ERROR:", err);
 
       setError(
         err?.errors?.[0]?.longMessage ||
-        err?.errors?.[0]?.message ||
+        err?.message ||
         "Authentication failed"
       );
     } finally {
