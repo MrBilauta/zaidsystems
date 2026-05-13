@@ -65,16 +65,25 @@ function SignInContent() {
       });
 
       if (result.status === "complete") {
+        console.log("AUTH SUCCESS", result);
+        console.log("SETTING ACTIVE SESSION");
+
         await setActive?.({
           session: result.createdSessionId,
         });
 
+        console.log("REDIRECTING TO:", redirectUrl);
         router.push(redirectUrl);
       }
     } catch (err: any) {
-      console.error(err);
+      console.error("FULL AUTH ERROR:", err);
+      console.log("Clerk Error Object:", JSON.stringify(err, null, 2));
+
       setError(
-        err?.errors?.[0]?.longMessage || "Authentication failed"
+        err?.errors?.[0]?.longMessage ||
+        err?.errors?.[0]?.message ||
+        err?.message ||
+        "Authentication failed"
       );
     } finally {
       setIsAuthenticating(false);
@@ -180,6 +189,33 @@ function SignInContent() {
           </form>
         </div>
       </div>
+
+      {/* Developer Diagnostics Panel */}
+      {process.env.NODE_ENV === "development" && (
+        <div className="mt-6 p-4 rounded-2xl bg-black/50 border border-blue-500/30 backdrop-blur-md">
+          <h3 className="text-blue-400 text-xs font-mono uppercase tracking-widest mb-3 flex items-center gap-2">
+            <Lock className="w-4 h-4" /> Auth Diagnostics
+          </h3>
+          <div className="space-y-2 text-xs font-mono text-white/70">
+            <div className="flex justify-between">
+              <span>Auth Loaded:</span>
+              <span className={authLoaded ? "text-green-400" : "text-yellow-400"}>{String(authLoaded)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>SignIn Exists:</span>
+              <span className={signIn ? "text-green-400" : "text-red-400"}>{String(!!signIn)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Redirect URL:</span>
+              <span className="text-blue-400 truncate max-w-[150px]" title={redirectUrl}>{redirectUrl}</span>
+            </div>
+            <div className="flex justify-between border-t border-white/10 pt-2 mt-2">
+              <span>Error State:</span>
+              <span className={error ? "text-red-400" : "text-green-400"}>{error ? "Present" : "None"}</span>
+            </div>
+          </div>
+        </div>
+      )}
     </motion.div>
   );
 }
