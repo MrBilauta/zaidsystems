@@ -55,34 +55,60 @@ function SignInContent() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
+    console.clear();
+
+    console.log("=== SIGN IN ATTEMPT START ===");
+
     try {
       setError("");
       setIsAuthenticating(true);
+
+      console.log("Submitting credentials...");
 
       const result = await signIn.create({
         identifier: email,
         password,
       });
 
-      if (result.status === "complete") {
-        console.log("AUTH SUCCESS", result);
-        console.log("SETTING ACTIVE SESSION");
+      console.log("AUTH SUCCESS:");
+      console.log(result);
 
-        await setActive?.({
+      console.log("STATUS:", result.status);
+
+      if (result.status === "complete") {
+        console.log("Session ID:", result.createdSessionId);
+
+        const activeResult = await setActive?.({
           session: result.createdSessionId,
         });
 
-        console.log("REDIRECTING TO:", redirectUrl);
+        console.log("SET ACTIVE RESULT:");
+        console.log(activeResult);
+
+        console.log("Redirecting to:", redirectUrl);
+
         router.push(redirectUrl);
+      } else {
+        console.log("NON COMPLETE STATUS:");
+        console.log(result);
       }
     } catch (err: any) {
-      console.error("FULL AUTH ERROR:", JSON.stringify(err, null, 2));
+      console.log("=== FULL AUTH FAILURE ===");
 
-      console.log("RAW ERROR OBJECT:", err);
+      console.error(err);
 
-      if (err?.errors?.length) {
+      try {
+        console.log(
+          "STRINGIFIED ERROR:",
+          JSON.stringify(err, null, 2)
+        );
+      } catch {}
+
+      if (err?.errors) {
         console.table(err.errors);
       }
+
+      console.log("RAW ERRORS:", err?.errors);
 
       setError(
         err?.errors?.[0]?.longMessage ||
