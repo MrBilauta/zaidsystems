@@ -16,20 +16,50 @@ const isAuthRoute = createRouteMatcher(["/sign-in(.*)", "/sign-up(.*)"]);
 
 function applySecurityHeaders(request: NextRequest, response: NextResponse, requestId: string): NextResponse {
   const csp = `
-    default-src 'self';
-    script-src 'self' 'unsafe-inline' 'unsafe-eval' https://clerk.zaidsystems.dev https://*.clerk.accounts.dev https://accounts.clerk.dev https://challenges.cloudflare.com;
-    style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
-    img-src 'self' data: blob: https:;
-    font-src 'self' https://fonts.gstatic.com;
-    connect-src 'self' https://clerk.zaidsystems.dev https://*.clerk.accounts.dev https://accounts.clerk.dev https://api.clerk.com wss://*.clerk.accounts.dev https://challenges.cloudflare.com;
-    frame-src https://challenges.cloudflare.com https://*.clerk.accounts.dev;
-    media-src 'self';
-    object-src 'none';
-    base-uri 'self';
-    form-action 'self';
-    frame-ancestors 'none';
-    upgrade-insecure-requests;
-  `.replace(/\s{2,}/g, " ").trim();
+  default-src 'self';
+
+  script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:
+  https://clerk.zaidsystems.dev
+  https://*.clerk.accounts.dev
+  https://accounts.clerk.dev
+  https://challenges.cloudflare.com
+  https://static.cloudflareinsights.com;
+
+  style-src 'self' 'unsafe-inline'
+  https://fonts.googleapis.com;
+
+  img-src 'self' data: blob: https:;
+
+  font-src 'self'
+  https://fonts.gstatic.com;
+
+  connect-src 'self'
+  https://clerk.zaidsystems.dev
+  https://*.clerk.accounts.dev
+  https://accounts.clerk.dev
+  https://api.clerk.com
+  https://clerk-telemetry.com
+  wss://*.clerk.accounts.dev
+  https://challenges.cloudflare.com;
+
+  worker-src 'self' blob:;
+
+  frame-src
+  https://challenges.cloudflare.com
+  https://*.clerk.accounts.dev;
+
+  media-src 'self';
+
+  object-src 'none';
+
+  base-uri 'self';
+
+  form-action 'self';
+
+  frame-ancestors 'none';
+
+  upgrade-insecure-requests;
+`.replace(/\s{2,}/g, " ").trim();
 
   response.headers.set("Content-Security-Policy", csp);
   response.headers.set("X-Request-ID", requestId);
@@ -38,12 +68,12 @@ function applySecurityHeaders(request: NextRequest, response: NextResponse, requ
   response.headers.set("X-DNS-Prefetch-Control", "off");
   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
   response.headers.set("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload");
-  
+
   // Advanced Production Headers
   response.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), interest-cohort=(), payment=(), usb=()");
   response.headers.set("Cross-Origin-Opener-Policy", "same-origin");
   response.headers.set("Cross-Origin-Resource-Policy", "same-origin");
-  
+
   response.headers.delete("X-Powered-By");
 
   return response;
@@ -82,9 +112,9 @@ export const proxy = clerkMiddleware(async (auth, req) => {
     const { success, limit, reset } = await checkRateLimit(limiter, ip);
 
     if (!success) {
-      const response = new NextResponse(JSON.stringify({ 
-        error: "Too many requests", 
-        requestId 
+      const response = new NextResponse(JSON.stringify({
+        error: "Too many requests",
+        requestId
       }), {
         status: 429,
         headers: {
