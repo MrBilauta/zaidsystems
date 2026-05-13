@@ -113,7 +113,6 @@ export const viewport: Viewport = {
   maximumScale: 5,
 };
 
-import { ClientSideComponents } from "@/components/providers/ClientSideComponents";
 
 // ... other imports ...
 
@@ -139,7 +138,6 @@ export default function RootLayout({
           <JsonLd data={personSchema} />
           <JsonLd data={organizationSchema} />
           <JsonLd data={websiteSchema} />
-          <ClientSideComponents />
           
           {/* Lowered z-index and improved opacity for the noise overlay to prevent portal interference */}
           <div className="fixed inset-0 bg-noise z-[1] pointer-events-none opacity-20" />
