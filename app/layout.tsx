@@ -121,48 +121,33 @@ import { dark } from "@clerk/themes";
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
-    <ClerkProvider
-      appearance={{
-        baseTheme: dark,
-        variables: {
-          colorPrimary: "oklch(0.6 0.15 260)",
-          colorBackground: "oklch(0.13 0 0)",
-          colorInputBackground: "oklch(1 0 0 / 5%)",
-          colorInputText: "white",
-          borderRadius: "0.625rem",
-        },
-        elements: {
-          card: "shadow-2xl border border-white/10 glass",
-          navbar: "hidden",
-          footer: "hidden",
-          headerTitle: "tracking-tight font-bold",
-          headerSubtitle: "text-muted-foreground",
-          socialButtonsBlockButton: "border-white/10 hover:bg-white/5 transition-all",
-          formButtonPrimary: "bg-primary hover:bg-primary/90 transition-all text-white font-bold",
-        },
-      }}
+    <html
+      lang="en"
+      className={`${geistSans.variable} ${geistMono.variable} dark`}
+      suppressHydrationWarning
     >
-      <html
-        lang="en"
-        className={`${geistSans.variable} ${geistMono.variable} dark`}
-        suppressHydrationWarning
-      >
-        <body className="min-h-screen bg-background text-foreground antialiased selection:bg-primary/30 relative">
+      <body className="min-h-screen bg-background text-foreground antialiased relative">
+        <ClerkProvider
+          appearance={{
+            baseTheme: dark,
+          }}
+        >
           <JsonLd data={personSchema} />
           <JsonLd data={organizationSchema} />
           <JsonLd data={websiteSchema} />
           <ClientSideComponents />
+          
           {/* Lowered z-index and improved opacity for the noise overlay to prevent portal interference */}
           <div className="fixed inset-0 bg-noise z-[1] pointer-events-none opacity-20" />
           <div className="relative z-10 flex flex-col min-h-screen">
             {children}
           </div>
-        </body>
-      </html>
-    </ClerkProvider>
+        </ClerkProvider>
+      </body>
+    </html>
   );
 }
