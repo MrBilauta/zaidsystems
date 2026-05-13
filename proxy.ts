@@ -19,6 +19,16 @@ function applySecurityHeaders(request: NextRequest, response: NextResponse, requ
   default-src 'self';
 
   script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:
+  https://clerk.zaidsystems.dev
+  https://accounts.zaidsystems.dev
+  https://*.clerk.accounts.dev
+  https://accounts.clerk.dev
+  https://challenges.cloudflare.com
+  https://static.cloudflareinsights.com;
+
+  script-src-elem 'self' 'unsafe-inline' 'unsafe-eval' blob:
+  https://clerk.zaidsystems.dev
+  https://accounts.zaidsystems.dev
   https://*.clerk.accounts.dev
   https://accounts.clerk.dev
   https://challenges.cloudflare.com
@@ -33,16 +43,21 @@ function applySecurityHeaders(request: NextRequest, response: NextResponse, requ
   https://fonts.gstatic.com;
 
   connect-src 'self'
+  https://clerk.zaidsystems.dev
+  https://accounts.zaidsystems.dev
   https://*.clerk.accounts.dev
   https://accounts.clerk.dev
   https://api.clerk.com
   https://clerk-telemetry.com
   wss://*.clerk.accounts.dev
+  wss://clerk.zaidsystems.dev
   https://challenges.cloudflare.com;
 
   worker-src 'self' blob:;
 
   frame-src
+  https://clerk.zaidsystems.dev
+  https://accounts.zaidsystems.dev
   https://challenges.cloudflare.com
   https://*.clerk.accounts.dev;
 
