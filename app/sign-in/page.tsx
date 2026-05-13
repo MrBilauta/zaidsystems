@@ -65,32 +65,22 @@ function SignInContent() {
 
       console.log("Submitting credentials...");
 
-      const result = await signIn.create({
+      const attempt = await signIn.create({
         identifier: email,
         password,
       });
 
-      console.log("AUTH SUCCESS:");
-      console.log(result);
+      console.log("RAW SIGNIN ATTEMPT:", attempt);
+      console.log("ATTEMPT TYPE:", typeof attempt);
 
-      console.log("STATUS:", result.status);
-
-      if (result.status === "complete") {
-        console.log("Session ID:", result.createdSessionId);
-
-        const activeResult = await setActive?.({
-          session: result.createdSessionId,
+      if (attempt.status === "complete") {
+        await setActive?.({
+          session: attempt.createdSessionId,
         });
-
-        console.log("SET ACTIVE RESULT:");
-        console.log(activeResult);
-
-        console.log("Redirecting to:", redirectUrl);
 
         router.push(redirectUrl);
       } else {
-        console.log("NON COMPLETE STATUS:");
-        console.log(result);
+        console.log("INCOMPLETE SIGN IN:", attempt);
       }
     } catch (err: any) {
       console.log("=== FULL AUTH FAILURE ===");
