@@ -118,6 +118,7 @@ import { ClientSideComponents } from "@/components/providers/ClientSideComponent
 // ... other imports ...
 
 import { dark } from "@clerk/themes";
+import { Analytics } from '@vercel/analytics/next';
 
 export default function RootLayout({
   children,
@@ -161,6 +162,7 @@ export default function RootLayout({
           <div className="relative z-10 flex flex-col min-h-screen">
             {children}
           </div>
+          <Analytics />
         </body>
       </html>
     </ClerkProvider>
