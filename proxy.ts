@@ -2,7 +2,6 @@ import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { apiLimiter, aiLimiter, checkRateLimit } from "@/lib/security/limiter";
-import { generateNonce } from "@/lib/security/nonce";
 
 /**
  * Zaid Systems — Zero-Trust Proxy (Next.js 16)
@@ -15,25 +14,24 @@ const isWebhookRoute = createRouteMatcher(["/api/webhooks(.*)"]);
 const isAiApiRoute = createRouteMatcher(["/api/ai/(.*)"]);
 const isAuthRoute = createRouteMatcher(["/sign-in(.*)", "/sign-up(.*)"]);
 
-function applySecurityHeaders(request: NextRequest, response: NextResponse, nonce: string, requestId: string): NextResponse {
-  const isDev = process.env.NODE_ENV === "development";
-
-  const csp = [
-    "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' ${isDev ? "'unsafe-eval'" : ""} https://clerk.zaidsystems.dev https://*.clerk.accounts.dev https://challenges.cloudflare.com https://accounts.clerk.dev`,
-    `style-src 'self' 'nonce-${nonce}' https://fonts.googleapis.com`,
-    "font-src 'self' https://fonts.gstatic.com",
-    "img-src 'self' data: blob: https://res.cloudinary.com https://img.clerk.com https://images.clerk.dev https://www.zaidsystems.dev",
-    "connect-src 'self' https://api.clerk.dev https://*.clerk.accounts.dev https://*.ingest.sentry.io https://vitals.vercel-insights.com wss://clerk.zaidsystems.dev",
-    "frame-src https://challenges.cloudflare.com https://accounts.clerk.dev",
-    "frame-ancestors 'none'",
-    "base-uri 'self'",
-    "form-action 'self'",
-    "upgrade-insecure-requests",
-  ].join("; ");
+function applySecurityHeaders(request: NextRequest, response: NextResponse, requestId: string): NextResponse {
+  const csp = `
+    default-src 'self';
+    script-src 'self' 'unsafe-inline' 'unsafe-eval' https://clerk.zaidsystems.dev https://*.clerk.accounts.dev https://accounts.clerk.dev https://challenges.cloudflare.com;
+    style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+    img-src 'self' data: blob: https:;
+    font-src 'self' https://fonts.gstatic.com;
+    connect-src 'self' https://clerk.zaidsystems.dev https://*.clerk.accounts.dev https://accounts.clerk.dev https://api.clerk.com wss://*.clerk.accounts.dev https://challenges.cloudflare.com;
+    frame-src https://challenges.cloudflare.com https://*.clerk.accounts.dev;
+    media-src 'self';
+    object-src 'none';
+    base-uri 'self';
+    form-action 'self';
+    frame-ancestors 'none';
+    upgrade-insecure-requests;
+  `.replace(/\s{2,}/g, " ").trim();
 
   response.headers.set("Content-Security-Policy", csp);
-  response.headers.set("X-Nonce", nonce);
   response.headers.set("X-Request-ID", requestId);
   response.headers.set("X-Frame-Options", "DENY");
   response.headers.set("X-Content-Type-Options", "nosniff");
@@ -55,11 +53,10 @@ export const proxy = clerkMiddleware(async (auth, req) => {
   const { pathname } = req.nextUrl;
   const requestId = req.headers.get("x-request-id") || crypto.randomUUID();
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0] ?? "unknown";
-  const nonce = generateNonce();
 
   // 1. Skip over-aggressive checks for internal Next.js assets
   if (pathname.startsWith("/_next") || pathname.includes("favicon.ico") || isWebhookRoute(req)) {
-    return applySecurityHeaders(req, NextResponse.next(), nonce, requestId);
+    return applySecurityHeaders(req, NextResponse.next(), requestId);
   }
 
   // 2. Private Onboarding Gate (Disable public sign-ups)
@@ -70,13 +67,13 @@ export const proxy = clerkMiddleware(async (auth, req) => {
     // If token is missing or incorrect, redirect to sign-in (Public Disguise)
     if (!secretToken || onboardingToken !== secretToken) {
       const signInUrl = new URL("/sign-in", req.url);
-      return applySecurityHeaders(req, NextResponse.redirect(signInUrl), nonce, requestId);
+      return applySecurityHeaders(req, NextResponse.redirect(signInUrl), requestId);
     }
   }
 
   // 3. Allow public access to sign-in
   if (pathname === "/sign-in") {
-    return applySecurityHeaders(req, NextResponse.next(), nonce, requestId);
+    return applySecurityHeaders(req, NextResponse.next(), requestId);
   }
 
   // 2. Rate Limiting
@@ -97,7 +94,7 @@ export const proxy = clerkMiddleware(async (auth, req) => {
           "X-RateLimit-Reset": String(reset),
         },
       });
-      return applySecurityHeaders(req, response, nonce, requestId);
+      return applySecurityHeaders(req, response, requestId);
     }
   }
 
@@ -107,18 +104,18 @@ export const proxy = clerkMiddleware(async (auth, req) => {
     if (!session.userId) {
       const signInUrl = new URL("/sign-in", req.url);
       signInUrl.searchParams.set("redirect_url", pathname);
-      return NextResponse.redirect(signInUrl);
+      return applySecurityHeaders(req, NextResponse.redirect(signInUrl), requestId);
     }
 
     // Role-based Access Control (Enforce ADMIN or SUPER_ADMIN)
     const role = (session.sessionClaims?.metadata as any)?.role;
     if (role !== "ADMIN" && role !== "SUPER_ADMIN") {
-      return NextResponse.rewrite(new URL("/403", req.url));
+      return applySecurityHeaders(req, NextResponse.rewrite(new URL("/403", req.url)), requestId);
     }
   }
 
   const response = NextResponse.next();
-  return applySecurityHeaders(req, response, nonce, requestId);
+  return applySecurityHeaders(req, response, requestId);
 });
 
 export default proxy;
