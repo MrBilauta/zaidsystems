@@ -114,6 +114,7 @@ export const viewport: Viewport = {
 };
 
 import { ClientSideComponents } from "@/components/providers/ClientSideComponents";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 // ... other imports ...
 
@@ -161,6 +162,7 @@ export default function RootLayout({
           <div className="relative z-10 flex flex-col min-h-screen">
             {children}
           </div>
+          <SpeedInsights />
         </body>
       </html>
     </ClerkProvider>
