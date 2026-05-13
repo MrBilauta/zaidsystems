@@ -19,7 +19,6 @@ function applySecurityHeaders(request: NextRequest, response: NextResponse, requ
   default-src 'self';
 
   script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:
-  https://clerk.zaidsystems.dev
   https://*.clerk.accounts.dev
   https://accounts.clerk.dev
   https://challenges.cloudflare.com
@@ -34,7 +33,6 @@ function applySecurityHeaders(request: NextRequest, response: NextResponse, requ
   https://fonts.gstatic.com;
 
   connect-src 'self'
-  https://clerk.zaidsystems.dev
   https://*.clerk.accounts.dev
   https://accounts.clerk.dev
   https://api.clerk.com
