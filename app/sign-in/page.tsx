@@ -76,13 +76,17 @@ function SignInContent() {
         router.push(redirectUrl);
       }
     } catch (err: any) {
-      console.error("FULL AUTH ERROR:", err);
-      console.log("Clerk Error Object:", JSON.stringify(err, null, 2));
+      console.error("FULL AUTH ERROR:", JSON.stringify(err, null, 2));
+
+      console.log("RAW ERROR OBJECT:", err);
+
+      if (err?.errors?.length) {
+        console.table(err.errors);
+      }
 
       setError(
         err?.errors?.[0]?.longMessage ||
         err?.errors?.[0]?.message ||
-        err?.message ||
         "Authentication failed"
       );
     } finally {
